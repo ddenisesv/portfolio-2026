@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experience — Denise Salvador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Sometype+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Cross-document View Transition — see index.html for full rationale.
+     Graceful degradation is automatic: unsupported browsers just ignore
+     this at-rule and navigate normally. */
+  @view-transition{
+    navigation: auto;
+  }
+
+  :root{
+    --bg: #fefff1;
+    --ink: #252623;
+
+    --hl-pink: #ffc0cb;
+    --hl-purple: #a6aafd;
+    --hl-brown: #b88a67;
+    --hl-blue: #6fc8f4;
+    --hl-orange: #ffa500;
+    --hl-olive: #ccc500;
+    --hl-green: #17a154;
+    --hl-red: #f5380a;
+    --hl-mint: #bae2df;
+    --hl-yellow: #f9d631;
+
+    /* same reference scale as index.html — this page has no JS fit loop,
+       so --hero-fs just sits at its fluid clamp value.
+       Scaling-audit note: recalibrated to the current 1696px Figma reference
+       frame (was 1440px) — see index.html's :root for the full explanation. */
+    --hero-fs: clamp(15px, 1.6vw + 8px, 48px);
+    --pad-x: clamp(16px, 4vw, 48px);
+    --pad-y: clamp(16px, 3vh, 42px);
+    --body-lh: 1.42;
+    --nav-fs: clamp(14px, 0.705vw + 8px, 40px);
+    --portfolio-indent-x: 8%; /* matches index.html's project column edge, so the bottom nav aligns identically across pages */
+    --dot-grid-h: clamp(20px, 1.885vw, 56px); /* decoupled from --hero-fs — see index.html */
+    /* The large dot-grid's on-screen size, applied as a REAL height (not a
+       transform scale — see .dot-grid--large for why that matters for the
+       View Transition). Contained via vmin so it can never exceed either
+       viewport dimension. Measured from the Figma frame (171:3168): the
+       cluster's bounding box is 704.18px square in a 1696x1024 frame; that
+       frame is wider than tall, so vmin resolves against height there —
+       704.18/1024 = 68.77vmin at the reference size. */
+    --dot-grid-target: clamp(140px, 68.77vmin, 760px);
+  }
+
+  /* Desktop: matches index.html's tighter project margin, keeping the bottom
+     nav's e-mail/LinkedIn group on the same edge across both pages. */
+  @media (min-width: 1025px){
+    :root{
+      --portfolio-indent-x: 6vw;
+    }
+  }
+
+  *{ box-sizing: border-box; }
+
+  /* ~0.3s matches the morph duration measured in the reference recording;
+     the previous 0.5s was noticeably slower. The old/new snapshots are
+     faded out/in fast so the travelling group animation reads as one
+     continuous object moving and resizing, rather than a cross-dissolve
+     between two separate images. */
+  ::view-transition-group(dot-grid){
+    animation-duration: 0.8s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  ::view-transition-old(dot-grid),
+  ::view-transition-new(dot-grid){
+    animation-duration: 0.8s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    /* the dot cluster is the same artwork on both sides — holding it fully
+       opaque avoids a ghosty double-image mid-flight */
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(dot-grid){ animation-name: vt-fade-out; }
+  ::view-transition-new(dot-grid){ animation-name: vt-fade-in; }
+  @keyframes vt-fade-out{ from{ opacity:1 } to{ opacity:0 } }
+  @keyframes vt-fade-in{ from{ opacity:0 } to{ opacity:1 } }
+
+  html{ scroll-behavior: smooth; height: 100%; }
+
+  html, body{
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  /* This page is a single fixed screen by design — no content below the
+     fold to scroll to, unlike index.html (which must stay scrollable). */
+  body{
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Dela Gothic One', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* No top padding: the nav moved to the bottom, so the old top-clearance
+     offset no longer applies. Without it, main spans the full viewport
+     height and .dot-grid--large's top: 50% centers against the whole screen
+     rather than against "remaining space below a header". */
+  main{
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  a{ color: inherit; }
+
+  /* ---------- SHARED SITE NAV (identical to index.html) ---------- */
+  /* Fixed to the BOTTOM of the viewport, no bg fill. */
+  #site-nav{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    padding: var(--pad-y) var(--pad-x);
+    padding-bottom: calc(var(--pad-y) + env(safe-area-inset-bottom, 0px));
+    font-size: var(--nav-fs);
+    font-family: 'Dela Gothic One', system-ui, sans-serif;
+    pointer-events: none;
+  }
+  #site-nav a{ pointer-events: auto; }
+
+  /* Touch breakpoints: lift the nav off the very bottom edge so it clears
+     browser chrome (URL bar / home indicator) and sits in comfortable thumb
+     reach. env() resolves to 0px where there's no inset, so this degrades to
+     just the 24px baseline on devices/browsers without safe areas.
+     This is padding on a position:fixed overlay — it adds no document height,
+     so experience.html's fixed 100svh no-scroll layout is unaffected. */
+  @media (max-width: 1024px){
+    #site-nav{
+      padding-bottom: calc(24px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+  /* TABLET LANDSCAPE — the desktop rule sizes the cluster off vmin, which on
+     a 1024x768 tablet produces a bbox nearly as tall as the viewport. Per the
+     placement guide the target bbox is ~62.5% of the height, i.e. a 44.2vh
+     side once the 45deg rotation's sqrt(2) bbox growth is accounted for.
+     Repositioned by CENTRE here (left/top + translate(-50%,-50%)) rather than
+     the desktop's right-edge anchor, since the guide marks a centre point.
+     pointer: coarse keeps this off small desktop windows of the same width. */
+  @media (orientation: landscape) and (pointer: coarse) and (min-height: 501px){
+    :root{
+      --dot-grid-target: 44.2vh;
+    }
+    .dot-grid--large{
+      left: 69%;
+      right: auto;
+      top: 47.4%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  }
+
+  /* Short landscape: reclaim vertical space (see index.html). */
+  @media (orientation: landscape) and (max-height: 500px){
+    #site-nav{
+      padding-block: clamp(8px, 2vh, 14px);
+      padding-bottom: calc(clamp(8px, 2vh, 14px) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /* The arrow sits at its OWN left offset (the page's outer --pad-x) and is
+     deliberately NOT part of .nav-links — see index.html for the rationale. */
+  .nav-arrow{
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+    flex-shrink: 0;
+  }
+  /* arrow.svg is self-contained (white rounded square + dark border + pink
+     glyph), so it gets NO .hl background wrapper. */
+  .nav-arrow img{
+    height: 1.5em;
+    width: auto;
+    display: block;
+  }
+  /* Same single asset as index.html, rotated to point left (back home). */
+  .nav-arrow--back img{
+    transform: rotate(-90deg);
+  }
+
+  .nav-links{
+    display: flex;
+    align-items: center;
+    gap: clamp(20px, 4vw, 56px);
+    margin-left: calc(var(--portfolio-indent-x) - var(--pad-x));
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  /* No hero to scroll past here, so the nav is active from the start */
+  body.experience-page .nav-links{
+    opacity: 1;
+    transform: none;
+  }
+
+  .dot-grid{
+    height: var(--dot-grid-h);
+    width: auto;
+    aspect-ratio: 32.496 / 31.959;
+    display: block;
+    view-transition-name: dot-grid;
+  }
+  /* View Transitions interpolate a captured snapshot's real geometry
+     (position + width/height) between the two documents. transform: scale()
+     does NOT change that geometry — it only affects paint — so the previous
+     approach gave the browser two snapshots of the same tiny 32px box and
+     nothing meaningful to animate, and it silently fell back to the default
+     whole-page cross-fade instead of a travelling morph.
+     Fix: give the large version actual layout dimensions (width/height),
+     not a scale factor. Now the "old" snapshot is a small box in the corner
+     and the "new" one is a large box mid-page, so the browser has a real
+     size+position delta to tween. The rotation stays as a transform since
+     it's genuinely a paint-level effect and animates fine on its own.
+     top/right are measured from the Figma frame (171:3168): the cluster's
+     center sits at y=607.24 in a 1024-tall frame (59.3%), and its right
+     edge 189.82px short of the 1696-wide frame's right edge (11.2%). */
+  .dot-grid--large{
+    position: absolute;
+    top: 50%; /* main now spans the full viewport, so this centers against the whole screen */
+    right: 11.2%;
+    height: var(--dot-grid-target);
+    width: auto;
+    transform: translateY(-50%) rotate(-45deg);
+    transform-origin: 50% 50%;
+  }
+
+  /* ---------- HIGHLIGHTS (identical to index.html) ---------- */
+  .hl{
+    background-color: var(--hl-c);
+    padding: 0 0.06em;
+    line-height: calc(var(--body-lh) * 0.72);
+    border-radius: 0.06em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    white-space: normal;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.hl:hover, a.hl:focus, a.hl:active{
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Hover states — .hl-red and .hl-mint are used ONLY by the e-mail and
+     LinkedIn nav links respectively, so scoping the hover to the class
+     itself is safe and doesn't leak into the hero's highlights. */
+  a.hl{
+    transition: background-color 0.25s ease;
+  }
+  a.hl-red:hover{ --hl-c: #a6aafd; }
+  a.hl-mint:hover{ --hl-c: #ccc500; }
+
+  .hl-pink{ --hl-c: var(--hl-pink); }
+  .hl-red{ --hl-c: var(--hl-red); }
+  .hl-mint{ --hl-c: var(--hl-mint); }
+
+  /* ---------- DOT-GRID STAGE ---------- */
+  /* Fills whatever vertical space main has left (no independent min-height,
+     since main is already constrained to fit within the no-scroll 100svh
+     body). Just a relative-positioning context now — actual placement of
+     the dot-grid happens on .dot-grid--large itself, see above. */
+  .dots-stage{
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .dots-stage a{
+    display: block;
+    line-height: 0;
+  }
+
+  /* ---------- EXPERIENCE LIST ---------- */
+  /* Absolutely positioned over the dots-stage area (not a stacked block)
+     so it never adds height beyond the fixed 100svh body. left: 5.7% /
+     bottom: 12.2% are measured directly from the Figma frame (171:3168):
+     the "Recent experience" block sits at x=96 (5.7% of the 1696-wide
+     frame) and its bottom edge is 125px short of the 1024-tall frame's
+     bottom (12.2%). */
+  .experience-section{
+    position: absolute;
+    left: 5.7%;
+    bottom: calc(12.2% + 100px); /* shifted up 100px from the Figma-measured position */
+    max-width: min(880px, 86%); /* widened to accommodate the larger column gap */
+    animation: experience-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* Fades and slides up into place on load. Declared as an animation (not a
+     JS-toggled class) so it runs on its own; if anything else on the page
+     fails, this still resolves to its final state rather than leaving the
+     list invisible. */
+  @keyframes experience-in{
+    from{ opacity: 0; transform: translateY(50px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+  /* Respect users who've asked for reduced motion — show it, just don't move it. */
+  @media (prefers-reduced-motion: reduce){
+    .experience-section{ animation: none; }
+  }
+  .experience-heading{
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(14px, 0.425vw + 12.8px, 40px);
+    line-height: 1.4;
+    margin: 0 0 clamp(20px, 4vh, 32px) 0;
+  }
+  .experience-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(16px, 3vh, 24px);
+    font-size: clamp(14px, 0.51vw + 9.36px, 34px);
+  }
+  .experience-row{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    /* ~3.7x the previous clamp(12.6px, 3.15vw, 33.6px), measured off the gap
+       guide: the current gap is ~6.5% of the list block's width and the
+       target is ~23.7%. This is on top of the earlier +5% bump, not
+       instead of it. */
+    gap: clamp(46px, 11.6vw, 124px);
+    font-family: 'Sometype Mono', monospace;
+  }
+  .experience-company{
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .experience-details{
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+  }
+  .experience-dates{
+    text-decoration: underline;
+  }
+
+  /* ---------- MOBILE / TABLET: stacked column ---------- */
+  /* On desktop the dots sit absolutely to the right with the experience list
+     at bottom-left, overlapping the same area. On touch sizes that doesn't
+     fit, so both become in-flow blocks in one column: dots in the upper
+     zone, list in the lower zone.
+     The list is pushed down by margin-top: auto rather than simply following
+     the dots — that's what puts it in the lower band marked in the placement
+     guides, instead of butting right up under the cluster.
+     Everything stays inside the fixed 100svh no-scroll body: main reserves
+     bottom room for the fixed nav, and the dot size is width-derived (below)
+     so the pair can't outgrow the screen. */
+  /* PORTRAIT ONLY — see index.html for why the orientation term matters:
+     width alone also caught phone-landscape and tablet-landscape, which have
+     no vertical room to stack. Both now fall through to the desktop
+     side-by-side arrangement (dots right, list bottom-left) per the guides. */
+  @media (max-width: 1024px) and (orientation: portrait){
+    :root{
+      /* Sized from the placement guides: the rotated cluster should span
+         ~50vw of a tablet and ~62vw of a phone. Since a 45°-rotated square's
+         bounding box is side x sqrt(2), the underlying height is that / 1.41
+         — which fits the line below across the whole touch range
+         (≈180px at 390w, ≈278px at 768w). */
+      --dot-grid-target: clamp(150px, 25.95vw + 78.8px, 360px);
+    }
+    main{
+      justify-content: flex-start;
+      padding-inline: var(--pad-x);
+      padding-top: clamp(16px, 4vh, 48px);
+      /* clears the fixed bottom nav (its own padding + safe area) */
+      padding-bottom: calc(72px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+    }
+    .dots-stage{
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Drops the cluster to the centre marked in the placement guides
+         (26.2% down on phone, 35.1% on tablet). Those two targets need
+         +60px at 390w and +122px at 768w, which are 15.4vw and 15.9vw — so
+         a single vw-based offset lands both. */
+      padding-top: clamp(40px, 15.6vw, 170px);
+    }
+    .dot-grid--large{
+      position: static;   /* back into flow, above the list */
+      transform: rotate(-45deg); /* no translateY: that was for absolute centering */
+      margin: 0 auto;
+    }
+    .experience-section{
+      position: static;   /* no longer pinned to bottom-left */
+      left: auto;
+      bottom: auto;
+      max-width: 100%;
+      width: 100%;
+      margin-top: auto;   /* drops it into the lower zone per the guides */
+      padding-bottom: clamp(8px, 3vh, 40px);
+    }
+  }
+
+  /* Short landscape (phone landscape, ~844x390): inherits the desktop
+     side-by-side arrangement, but the desktop dot size and the 100px text
+     lift are both too large for a ~390px-tall viewport — and this page must
+     stay inside 100svh with no scroll. Both are scaled to the height here. */
+  @media (orientation: landscape) and (max-height: 500px){
+    :root{
+      /* 45deg rotation means the visual bbox is ~1.41x this, so cap well
+         under the viewport height */
+      --dot-grid-target: clamp(90px, 46vh, 200px);
+    }
+    .experience-section{
+      /* Must clear the fixed bottom nav, which at this size is roughly
+         1.5em of --nav-fs plus its own padding (~37px total). The old 4vh
+         resolved to ~16px on a 390px-tall viewport, so the list ran under
+         the nav. This reserves the nav's height plus a visual gap. */
+      bottom: clamp(56px, 16vh, 92px);
+      max-width: min(420px, 44%);      /* leaves the right side clear for the dots */
+    }
+    .experience-heading{
+      margin-bottom: clamp(6px, 1.5vh, 14px);
+    }
+    .experience-list{
+      gap: clamp(6px, 1.4vh, 14px);
+    }
+    .experience-row{
+      gap: clamp(20px, 6vw, 72px);     /* the desktop gap is too wide at this size */
+    }
+  }
+
+  @media (max-width: 480px){
+    .experience-row{
+      flex-direction: column;
+      gap: 4px;
+    }
+    .experience-details{
+      text-align: left;
+    }
+  }
+</style>
+</head>
+<body class="experience-page">
+
+  <nav id="site-nav" aria-label="Site navigation">
+    <a class="nav-arrow nav-arrow--back" href="index.html" aria-label="Back to homepage">
+      <img src="assets/icons/arrow.svg" alt="">
+    </a>
+    <div class="nav-links">
+      <a class="hl hl-red email-copy" href="mailto:denise.salvadorv@gmail.com" data-default-text="e-mail">e-mail</a>
+      <a class="hl hl-mint" href="https://www.linkedin.com/in/ddenisesalvador/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="dots-stage" aria-label="Back to homepage">
+      <a href="index.html" aria-label="Back to homepage">
+        <img class="dot-grid dot-grid--large" src="assets/icons/menu-dots.svg" alt="">
+      </a>
+    </section>
+
+    <section class="experience-section" aria-label="Recent experience">
+      <h2 class="experience-heading">Most recent experience</h2>
+      <ul class="experience-list">
+        <li class="experience-row">
+          <span class="experience-company">lululemon</span>
+          <span class="experience-details">
+            <span>Senior Product Designer</span>
+            <span>Retail Technology</span>
+            <span class="experience-dates">April – Dec 2025</span>
+          </span>
+        </li>
+        <li class="experience-row">
+          <span class="experience-company">Frame.io<br>(Adobe)</span>
+          <span class="experience-details">
+            <span>Senior Product Designer</span>
+            <span>SaaS</span>
+            <span class="experience-dates">2021 – March 2025</span>
+          </span>
+        </li>
+        <li class="experience-row">
+          <span class="experience-company">MetaLab</span>
+          <span class="experience-details">
+            <span>Product Designer</span>
+            <span>Design Agency</span>
+            <span class="experience-dates">2017 – March 2021</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+<script>
+// ---------- Email: copy to clipboard, text -> "copied!" for 5s ----------
+// Identical shared-class logic as index.html.
+(function () {
+  var links = document.querySelectorAll('.email-copy');
+  if (!links.length) return;
+
+  var address = 'denise.salvadorv@gmail.com';
+
+  links.forEach(function (link) {
+    var defaultText = link.getAttribute('data-default-text') || link.textContent;
+    var resetTimer = null;
+
+    link.addEventListener('click', function (e) {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        return;
+      }
+
+      e.preventDefault();
+
+      navigator.clipboard.writeText(address).then(function () {
+        link.textContent = 'copied!';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () {
+          link.textContent = defaultText;
+        }, 5000);
+      }).catch(function () {
+        window.location.href = link.getAttribute('href');
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

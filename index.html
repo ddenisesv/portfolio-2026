@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Denise — Product Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Sometype+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Cross-document View Transition: morphs any element sharing a
+     view-transition-name (here, .dot-grid) between this page and the next
+     full navigation. This is the correct API for a real multi-page morph —
+     document.startViewTransition() only applies to same-document/SPA swaps,
+     not navigations between two separate HTML files.
+     Graceful degradation is automatic and free: browsers that don't support
+     this at-rule simply ignore it and do a normal navigation, exactly like
+     the .fitting-class pattern elsewhere on this site opts in rather than
+     requiring support. */
+  @view-transition{
+    navigation: auto;
+  }
+
+  :root{
+    --bg: #fefff1;
+    --ink: #252623;
+
+    --hl-pink: #ffc0cb;
+    --hl-purple: #a6aafd;
+    --hl-brown: #b88a67;
+    --hl-blue: #6fc8f4;
+    --hl-orange: #ffa500;
+    --hl-olive: #ccc500;
+    --hl-green: #17a154;
+    --hl-red: #f5380a;
+    --hl-mint: #bae2df;
+    --hl-yellow: #f9d631;
+
+    /* fallback size before JS fit-to-viewport kicks in */
+    --hero-fs: clamp(15px, 1.6vw + 8px, 48px);
+    --pad-x: clamp(16px, 4vw, 48px);
+    --pad-y: clamp(16px, 3vh, 42px);
+    --body-lh: 1.42;
+    /* Scaling-audit note: the Figma file's reference frame width has moved
+       from 1440px (when these clamps were first written) to 1696px. Every
+       clamp below that has a confirmed Figma-measured target value has been
+       recalibrated so that target is still hit at vw=16.96 (1696px), not
+       14.4 (1440px) — done by scaling each vw-coefficient by 1440/1696
+       (≈0.8491), which shifts the calibration point without changing the
+       target value itself. --pad-x/--pad-y/--hero-fs's fallback are left
+       alone: they aren't tied to a specific measured Figma value (hero-fs's
+       CSS value in particular is only a pre-JS fallback in practice). */
+    --nav-fs: clamp(14px, 0.705vw + 8px, 40px); /* 20px in Figma at 1696 */
+    /* Nav dot-grid height — deliberately NOT derived from --hero-fs. --hero-fs
+       is solved by JS to fit the greeting text and can plateau well below its
+       own ceiling on large/short viewports, which isn't a meaningful signal
+       for how big this icon should be. This clamp hits ~32px at 1696
+       (matching Figma) and keeps growing with viewport width up to 56px on
+       large screens. */
+    --dot-grid-h: clamp(20px, 1.885vw, 56px);
+    --portfolio-indent-x: 8%;
+    --project-gap: clamp(40px, 7vh, 96px);
+  }
+
+  *{ box-sizing: border-box; }
+
+  /* ~0.3s matches the morph duration measured in the reference recording;
+     the previous 0.5s was noticeably slower. The old/new snapshots are
+     faded out/in fast so the travelling group animation reads as one
+     continuous object moving and resizing, rather than a cross-dissolve
+     between two separate images. */
+  ::view-transition-group(dot-grid){
+    animation-duration: 0.8s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  ::view-transition-old(dot-grid),
+  ::view-transition-new(dot-grid){
+    animation-duration: 0.8s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    /* the dot cluster is the same artwork on both sides — holding it fully
+       opaque avoids a ghosty double-image mid-flight */
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(dot-grid){ animation-name: vt-fade-out; }
+  ::view-transition-new(dot-grid){ animation-name: vt-fade-in; }
+  @keyframes vt-fade-out{ from{ opacity:1 } to{ opacity:0 } }
+  @keyframes vt-fade-in{ from{ opacity:0 } to{ opacity:1 } }
+
+  html{
+    scroll-behavior: smooth;
+  }
+
+  html, body{
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    /* IMPORTANT: never overflow:hidden here — the document must remain scrollable */
+  }
+
+  body{
+    font-family: 'Dela Gothic One', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Hide the hero until JS has computed a font size that fits, to avoid a flash
+     of oversized/overflowing text. If JS never runs, the .fitting class never
+     gets added, so this rule simply never applies and the CSS clamp fallback shows. */
+  html.fitting .hero{ visibility: hidden; }
+
+  a{ color: inherit; }
+
+  /* ---------- HERO ---------- */
+
+  .hero{
+    position: relative;
+    height: 100svh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: calc(var(--pad-y) + 2.16em) var(--pad-x) var(--pad-y);
+  }
+
+  /* ---------- SHARED SITE NAV ---------- */
+  /* Fixed to the BOTTOM of the viewport (no bg fill — content scrolls
+     underneath). The arrow and dot grid are always visible/clickable; the
+     e-mail/LinkedIn pair fades in once the hero has fully scrolled out of
+     view (see body.nav-active, toggled by an IntersectionObserver in the
+     script below). On experience.html there's no hero to scroll past, so
+     that page adds the class directly and omits the dot-grid link (its
+     dot-grid is the big page visual instead — see .dots-stage). */
+  #site-nav{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    padding: var(--pad-y) var(--pad-x);
+    padding-bottom: calc(var(--pad-y) + env(safe-area-inset-bottom, 0px));
+    font-size: var(--nav-fs);
+    font-family: 'Dela Gothic One', system-ui, sans-serif;
+    pointer-events: none; /* children opt back in individually */
+  }
+  #site-nav a{ pointer-events: auto; }
+
+  /* Touch breakpoints: lift the nav off the very bottom edge so it clears
+     browser chrome (URL bar / home indicator) and sits in comfortable thumb
+     reach. env() resolves to 0px where there's no inset, so this degrades to
+     just the 24px baseline on devices/browsers without safe areas.
+     This is padding on a position:fixed overlay — it adds no document height,
+     so experience.html's fixed 100svh no-scroll layout is unaffected. */
+  @media (max-width: 1024px){
+    #site-nav{
+      padding-bottom: calc(24px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+  /* Short landscape: reclaim vertical space — the full touch clearance is a
+     big share of a ~390px-tall viewport. Safe-area inset still respected. */
+  @media (orientation: landscape) and (max-height: 500px){
+    #site-nav{
+      padding-block: clamp(8px, 2vh, 14px);
+      padding-bottom: calc(clamp(8px, 2vh, 14px) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /* The arrow sits at its OWN left offset (the page's outer --pad-x, applied
+     by #site-nav itself) and is deliberately NOT part of .nav-links — the
+     e-mail/LinkedIn group aligns to the project column instead, which is a
+     different, larger inset. Hence two separately-positioned groups rather
+     than one flex row sharing a single left edge. */
+  /* Fades in with the e-mail/LinkedIn pair — it replaced the text link that
+     used to live inside .nav-links, so it keeps that reveal behavior even
+     though it's now positioned separately. The dot grid stays always-visible,
+     as before. */
+  .nav-arrow{
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  body.nav-active .nav-arrow,
+  body.experience-page .nav-arrow{
+    opacity: 1;
+    transform: none;
+  }
+  /* arrow.svg is self-contained (white rounded square + dark border + pink
+     glyph), so it gets NO .hl background wrapper — that would stack a second
+     pink box behind the asset's own. */
+  .nav-arrow img{
+    height: 1.5em;
+    width: auto;
+    display: block;
+  }
+  /* Same single asset on both pages; experience.html rotates it to point
+     left (back to the homepage) rather than sourcing a second file. */
+  .nav-arrow--back img{
+    transform: rotate(-90deg);
+  }
+
+  /* e-mail + LinkedIn — left edge matched to the project column
+     (--portfolio-indent-x), not to the arrow. margin-left absorbs the
+     difference between the nav's own --pad-x and that indent. */
+  .nav-links{
+    display: flex;
+    align-items: center;
+    gap: clamp(20px, 4vw, 56px);
+    margin-left: calc(var(--portfolio-indent-x) - var(--pad-x));
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  body.nav-active .nav-links,
+  body.experience-page .nav-links{
+    opacity: 1;
+    transform: none;
+  }
+
+  .nav-dots{
+    margin-left: auto;
+    display: flex;
+  }
+
+  /* Reusable dot-grid — same element/class on both pages. Base size is the
+     small nav icon (32.496 x 31.959 in Figma); .dot-grid--large (the scaled
+     up, rotated experience-page hero visual) is only ever applied on
+     experience.html — see that file for its positioning/scale rules. */
+  .dot-grid{
+    height: var(--dot-grid-h);
+    width: auto;
+    aspect-ratio: 32.496 / 31.959;
+    display: block;
+    view-transition-name: dot-grid;
+  }
+
+  .hero-inner{
+    font-size: var(--hero-fs);
+    line-height: var(--body-lh);
+    letter-spacing: -0.05em;
+    width: 80%;
+    max-height: 80%; /* hero has an explicit height (100svh), so 80% = 80svh.
+                         .hero is top-aligned (justify-content: flex-start),
+                         so the ~20% gap this leaves collects entirely at the
+                         bottom of the viewport, not split top/bottom. The JS
+                         fit loop already targets this same 80% budget when
+                         solving for --hero-fs, so this is a safety cap,
+                         not a clipping mechanism (overflow stays visible). */
+    overflow: visible;
+  }
+
+  /* On narrow phones, padding + a strict 80% starts to squeeze the text
+     more than the design intends, so relax toward full-width there. */
+  @media (max-width: 480px){
+    .hero-inner{ width: 94%; }
+  }
+
+  .hero-inner p{
+    margin: 0; /* let line-height alone set the gap, so paragraph breaks
+                  read as just another line, consistent with in-paragraph spacing */
+  }
+  .hero-inner p:last-child{ margin-bottom: 0; }
+
+  .hl{
+    background-color: var(--hl-c);
+    padding: 0 0.06em;
+    line-height: calc(var(--body-lh) * 0.72); /* ~28% shorter highlight box; horizontal padding unchanged */
+    border-radius: 0.06em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    white-space: normal;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.hl:hover, a.hl:focus, a.hl:active{
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Hover states — .hl-red and .hl-mint are used ONLY by the e-mail and
+     LinkedIn nav links respectively, so scoping the hover to the class
+     itself is safe and doesn't leak into the hero's highlights. */
+  a.hl{
+    transition: background-color 0.25s ease;
+  }
+  a.hl-red:hover{ --hl-c: #a6aafd; }
+  a.hl-mint:hover{ --hl-c: #ccc500; }
+
+  .hl-pink{ --hl-c: var(--hl-pink); }
+  .hl-purple{ --hl-c: var(--hl-purple); }
+  .hl-brown{ --hl-c: var(--hl-brown); }
+  .hl-blue{ --hl-c: var(--hl-blue); }
+  .hl-orange{ --hl-c: var(--hl-orange); }
+  .hl-olive{ --hl-c: var(--hl-olive); }
+  .hl-green{ --hl-c: var(--hl-green); }
+  .hl-red{ --hl-c: var(--hl-red); }
+  .hl-mint{ --hl-c: var(--hl-mint); }
+  .hl-yellow{ --hl-c: var(--hl-yellow); }
+
+  /* Icon sizes are derived from each icon's real Figma bounding box (relative
+     to the 48px reference type size), so every icon keeps its own natural
+     aspect ratio instead of being forced into a uniform square. Only height
+     is set in em; width is "auto" and constrained by aspect-ratio, which
+     mirrors the icon's true w/h from Figma. */
+  .icon{
+    display: inline-block;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* hand.point / sparkles.tv / wand.and.stars / cloud.drizzle / lungs — all 82x82 in Figma */
+  .icon-lg{
+    height: 1.7083em; /* 82/48 */
+    aspect-ratio: 1 / 1;
+    vertical-align: -0.45em;
+  }
+
+  /* ML logo — 55x55 in Figma */
+  .icon-md{
+    height: 1.1458em; /* 55/48 */
+    aspect-ratio: 1 / 1;
+    vertical-align: -0.2em;
+  }
+
+  /* smiley — exported at its 82x82 Figma frame (the visible circle inside
+     is 52px, centered with padding), so it uses the same box as the other
+     82x82 icons to render at the correct scale */
+
+  /* Frame Logo — 43.75x50 in Figma */
+  .icon-frame{
+    height: 1.0417em; /* 50/48 */
+    aspect-ratio: 43.75 / 50;
+    vertical-align: -0.15em;
+  }
+
+  .annotation{
+    font-size: 0.42em;
+    letter-spacing: 0;
+    vertical-align: 0.55em;
+    margin-left: 0.15em;
+    white-space: nowrap;
+  }
+
+  /* ---------- PROJECT LIST ---------- */
+
+  .portfolio-content{
+    padding-block: calc(var(--pad-y) + 4em) clamp(64px, 10vh, 140px);
+    padding-inline: var(--portfolio-indent-x);
+  }
+
+  /* Default (no-JS/no-IntersectionObserver) state: fully visible, static —
+     this is the safe fallback. The scroll script opts IN to the animated
+     hidden-then-reveal state by adding html.js-reveal, same pattern as the
+     hero's .fitting class.
+     align-items: stretch (not the old flex-start) so .project-info spans
+     the full row height — needed so its blurb can anchor to the row's
+     bottom edge via margin-top: auto, matching the Figma layout. */
+  .project{
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: clamp(24px, 5vw, 64px);
+    padding-block: var(--project-gap);
+    opacity: 1;
+    transform: none;
+  }
+  html.js-reveal .project{
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  html.js-reveal .project.in-view{
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Dotted vertical line connecting this project's ✶ marker to the next
+     one's — spans the FULL row (star-to-star), not just the padding gap, by
+     positioning within .project (overflow-visible) and letting it extend
+     past this project's own bottom edge through the gap below. Default:
+     fully drawn (clip-path 0%), so a broken/absent script just leaves a
+     plain static line, never a blank span. Omitted on the last project
+     (nothing below it to connect to).
+     Horizontal: "left" here is a CSS fallback only (0.5em, the star's rough
+     advance-width center) for when JS hasn't run. A dedicated script below
+     measures .project-star's actual getBoundingClientRect() midpoint and
+     overrides this inline on load/resize/font-load — two rounds of
+     calc()-based assumptions about the glyph's em-box both missed the
+     glyph's real ink center, so this is now measured, not calculated.
+     Vertical: .project-star has line-height:1, so its glyph box is exactly
+     1em tall starting at the project's content-top; the line starts 0.15em
+     below that box's bottom edge and stops 0.15em above the next star's
+     box, at every viewport size, instead of overlapping either. */
+  .trace-line{
+    position: absolute;
+    left: 0.5em;
+    top: calc(var(--project-gap) + 1em + 0.15em);
+    bottom: calc(0.15em - var(--project-gap));
+    width: 0;
+    font-size: clamp(20px, 1.885vw + 8px, 80px); /* same clamp as .project-star, so top/bottom line up under the ✶ */
+    border-left: 2px dashed rgba(37, 38, 35, 0.35);
+    clip-path: inset(0 0 0% 0);
+  }
+  /* Last project has no next star to connect to, so instead of the
+     star-to-star span it runs from its own star down to the bottom edge of
+     its own thumbnail. The row's bottom padding is --project-gap, so
+     stopping exactly there lands it flush with the media's lower edge
+     rather than overshooting into the page's trailing whitespace. */
+  .trace-line--last{
+    bottom: var(--project-gap);
+  }
+
+  /* Description block. max-width is what keeps the thumbnail's space
+     constant regardless of text length: without it, a long line like
+     "w/Frame.io + Adobe Workfront" pushes this column's flex-basis (auto =
+     max-content) wider, stealing width from .project-thumb. Capping it
+     forces long lines to wrap instead. */
+  .project-info{
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    max-width: min(38%, 420px);
+    min-width: 0;
+  }
+  /* .project-top stretches the full row height so .project-meta (its flex
+     child) can stretch too, letting the blurb inside anchor to the bottom
+     via margin-top: auto. */
+  .project-top{
+    display: flex;
+    align-items: stretch;
+    gap: clamp(8px, 1vw, 12px);
+    flex: 1 1 auto;
+  }
+  .project-star{
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(20px, 1.885vw + 8px, 80px);
+    letter-spacing: -0.1em;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  /* The blurb now lives INSIDE this column (as a sibling of year/name/
+     company) rather than being positioned independently — so it inherits
+     this column's exact left edge automatically, at every breakpoint, with
+     no matched offset value to keep in sync. */
+  .project-meta{
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2px, 0.3vw, 3px);
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .project-year{
+    font-family: 'Dela Gothic One', sans-serif;
+    font-size: clamp(16px, 0.849vw + 9.6px, 48px);
+    line-height: 1.1667;
+    margin: 0;
+  }
+  .project-name,
+  .project-company{
+    font-family: 'Sometype Mono', monospace;
+    font-size: clamp(14px, 0.51vw + 9.36px, 34px);
+    line-height: 1.0625;
+    margin: 0;
+  }
+
+  /* Blurb — pushed to the column's bottom (margin-top: auto absorbs all
+     space above it), with a fixed-scale gap below it to the row's own
+     bottom edge. That gap is --project-gap (same token the row's own
+     padding-block uses) rather than a percentage: measured directly against
+     the Figma frame, the blurb sits a CONSTANT ~40px above the row's bottom
+     at every project, regardless of the blurb's own height varying (85–102px
+     across the four) — a percentage-of-row-height would vary with content,
+     a fixed token doesn't, which matches what's actually in the file. */
+  .project-blurb{
+    margin: 0;
+    margin-top: auto;
+    padding-top: clamp(24px, 4vh, 48px);
+    padding-bottom: var(--project-gap);
+    font-family: 'Sometype Mono', monospace;
+    font-size: clamp(14px, 0.51vw + 9.36px, 34px);
+    line-height: 1.0625;
+  }
+
+  /* Thumbnail — a fixed-aspect-ratio media container (1106:850, per the
+     current Figma frame — uniform across all four projects, confirmed
+     against the file rather than assumed). The box's size comes from this
+     spec, capped at 85svh tall / 100% of the row's available width; the
+     video inside always fills it completely via object-fit: cover, cropping
+     as needed rather than being sized by its own native dimensions. */
+  .project-thumb{
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .project-media{
+    aspect-ratio: 1106 / 850;
+    max-height: 85svh;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    border-radius: clamp(6px, 0.8vw, 16px);
+    overflow: hidden;
+    display: block;
+  }
+  .project-media video{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Desktop only: tighter side margins than the tablet/mobile default (8%).
+     Overriding the VARIABLE (not just .portfolio-content's padding) keeps
+     the bottom nav's e-mail/LinkedIn group aligned to the same edge
+     automatically, since it offsets off this same token. */
+  @media (min-width: 1025px){
+    :root{
+      --portfolio-indent-x: 6vw;
+    }
+  }
+
+  /* Narrow PORTRAIT widths: an 85svh-tall thumbnail can out-demand the width
+     the row has left beside .project-info. Pull the height cap down so the
+     media shrinks comfortably instead of overflowing.
+     Scoped to portrait: a landscape phone/tablet keeps the row layout and
+     has plenty of horizontal room, so it uses the full desktop 85svh. */
+  @media (max-width: 1024px) and (orientation: portrait){
+    .project-media{
+      max-height: 55svh;
+    }
+  }
+
+  /* Stacked layout — tablet portrait and mobile.
+     Explicit source order here: Year → Name → Company → Thumbnail → Blurb.
+     In the DOM the blurb sits inside .project-meta (so it left-aligns with
+     the year/name/company automatically on desktop), which would otherwise
+     place it ABOVE the thumbnail when stacked. Rather than leave the order
+     to chance, .project-info is flattened with display: contents so its
+     children participate directly in .project's column flex context, and
+     each item gets an explicit order. display: contents is what makes the
+     blurb orderable relative to the thumbnail despite being nested. */
+  /* PORTRAIT ONLY. Keyed on width alone, this also caught phone-landscape
+     (844x390) and tablet-landscape (1024x768) and stacked them — but a short,
+     wide viewport has no vertical room to stack and plenty of horizontal room
+     for the two-column row. Adding the orientation term lets both landscape
+     cases fall through to the desktop row layout, which is what the placement
+     guides show. */
+  @media (max-width: 1024px) and (orientation: portrait){
+    .project{
+      flex-direction: column;
+      align-items: stretch;
+      /* The desktop value here (clamp(24px, 5vw, 64px)) was tuned for the
+         horizontal split between the info column and the thumbnail. Once
+         display: contents flattens this into one column, that gap lands
+         between EVERY item — pushing year/name/company far apart. Reset it
+         to the tight spacing those three had inside .project-meta, and let
+         .project-thumb's own margin-block create the larger separations
+         around the media. */
+      gap: clamp(2px, 0.3vw, 3px);
+    }
+    .project-info,
+    .project-top,
+    .project-meta{
+      display: contents;
+    }
+    .project-star{ display: none; } /* the star's row-layout anchoring doesn't apply when stacked */
+
+    .project-year   { order: 1; }
+    .project-name   { order: 2; }
+    .project-company{ order: 3; }
+    .project-thumb  { order: 4; }
+    .project-blurb  { order: 5; }
+
+    .project-thumb{
+      width: 100%;
+      justify-content: flex-start;
+      margin-block: clamp(20px, 4vh, 36px);
+    }
+    .project-media{
+      max-width: 100%;
+      width: 100%;
+      height: auto;
+    }
+    .project-blurb{
+      margin-top: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      max-width: none;
+    }
+    /* The star-to-star trace line assumes the two-column row layout; in the
+       stacked layout it no longer lines up with anything meaningful, so
+       it's hidden outright rather than shown misaligned. */
+    .trace-line{
+      display: none;
+    }
+  }
+
+  /* ---------- HOVER CARD (one component, many triggers) ---------- */
+  /* A single floating card reused by every [data-hover-card] trigger in the
+     hero — Denise, Dogs, Frame.io, MetaLab. Content is swapped in per
+     trigger by the script rather than duplicating a card per word.
+     Cursor-following on pointer devices; anchored to the trigger on
+     keyboard focus (where there's no cursor to follow). */
+  #hover-card{
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-9999px, -9999px);
+    transition: opacity 0.18s ease;
+    width: min(42vw, 280px);
+  }
+  #hover-card.visible{ opacity: 1; visibility: visible; }
+
+  /* Per-layout widths. Base is the single-photo size; the others are sized
+     relative to it so the ratios stay intact if the base changes. */
+  #hover-card.hc-dogs{ width: min(37.8vw, 252px); }   /* 10% smaller than base */
+  #hover-card.hc-og{ width: min(54.6vw, 364px); }     /* 30% larger than base */
+
+  .hover-card-stage{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+  /* The source PNGs have rounded corners baked into their alpha channel, so
+     the element still needs a matching radius — otherwise the box-shadow
+     traces a square box behind rounded artwork and reads as square corners.
+     5.7% matches the exported radius (~34px on a 587px-wide export) and
+     scales with the card instead of being pinned to one size. */
+  .hover-card-stage img{
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 5.7%;
+    box-shadow: 0 12px 30px rgba(37, 38, 35, 0.25);
+    background: var(--bg);
+  }
+  .hover-card-stage.single img{
+    position: relative;
+  }
+
+  /* Dogs: a fanned poker-card stack. Both cards keep their rotation and
+     offset at all times; the loop animates which one is IN FRONT, so a card
+     travels from the back position to the front position rather than
+     cross-fading in place. z-index flips at the start of the move so the
+     incoming card rises over its neighbour as it travels. */
+  .hover-card-stage.fan{
+    aspect-ratio: 1 / 1;
+  }
+  .hover-card-stage.fan img{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 88%;
+    transform-origin: 50% 85%;
+    transition: transform 0.62s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-card-stage.fan img.card-front{
+    transform: translateX(4%) rotate(-8deg) scale(1);
+    z-index: 2;
+  }
+  .hover-card-stage.fan img.card-back{
+    transform: translateX(16%) rotate(10deg) scale(0.94);
+    z-index: 1;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hover-card-stage.fan img{ transition: none; }
+  }
+
+  /* Link-preview (Frame.io / MetaLab) images are wide OG cards, not squares.
+     Fixed radius here — these have no baked-in corners, and a percentage on
+     a 1200x630 box would give visibly elliptical corners. */
+  .hover-card-stage.og{
+    aspect-ratio: 1200 / 630;
+  }
+  .hover-card-stage.og img{
+    position: relative;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    border-radius: 14px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #hover-card{ transition: none; }
+  }
+</style>
+</head>
+<body id="top">
+
+  <nav id="site-nav" aria-label="Site navigation">
+    <a class="nav-arrow" href="#top" aria-label="Back to top">
+      <img src="assets/icons/arrow.svg" alt="">
+    </a>
+    <div class="nav-links">
+      <a class="hl hl-red email-copy" href="mailto:denise.salvadorv@gmail.com" data-default-text="e-mail">e-mail</a>
+      <a class="hl hl-mint" href="https://www.linkedin.com/in/ddenisesalvador/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </div>
+    <a class="nav-dots" href="experience.html" aria-label="View experience">
+      <img class="dot-grid" src="assets/icons/menu-dots.svg" alt="">
+    </a>
+  </nav>
+
+  <main>
+    <section class="hero" aria-label="Introduction">
+      <div class="hero-inner">
+        <p>
+          ¡Hola<span style="color:var(--hl-red)">,</span> soy
+          <span class="hl hl-pink" data-hover-card="denise" tabindex="0">Denise</span>!
+          <img class="icon icon-lg" src="assets/icons/smiley.svg" alt="" role="presentation">
+          I<span style="color:var(--hl-yellow)">'</span>m a product designer based in Vancouver<span style="color:var(--hl-green)">,</span> Canada.
+          <img class="icon icon-lg" src="assets/icons/cloud-drizzle.svg" alt="">
+        </p>
+
+        <p>
+          Over the past 10<span style="color:var(--hl-orange)">+</span> years<span style="color:var(--hl-blue)">,</span>
+          I've worked across enterprise and 0<span style="color:var(--hl-purple)">-</span>to<span style="color:var(--hl-pink)">-</span>1 products
+          <span style="color:#ccc500">—</span> previously at
+          <a class="hl hl-purple" data-hover-card="frameio" href="https://frame.io/home" target="_blank" rel="noopener noreferrer">Frame<span style="color:#ffffff">.</span>io</a>
+          <img class="icon icon-frame" src="assets/icons/frame-logo.svg" alt="">
+          (Adobe)<span style="color:var(--hl-brown)">,</span> where I designed features like
+          <img class="icon icon-lg" src="assets/icons/sparkles-tv.svg" alt="">
+          <a class="hl hl-blue" href="#approvals">Approvals</a><span style="color:var(--hl-red)">,</span>
+          <a class="hl hl-orange" href="#reel-layout">Reel Layout</a>
+          <span class="annotation"><span style="color:var(--hl-purple)">*</span>and others<span style="color:var(--hl-green)">.</span></span>
+        </p>
+
+        <p>
+          Before that at
+          <img class="icon icon-md" src="assets/icons/ml-logo.svg" alt="">
+          <a class="hl hl-brown" data-hover-card="metalab" href="https://www.metalab.com/" target="_blank" rel="noopener noreferrer">MetaLab</a><span style="color:var(--hl-yellow)">,</span> partnering with
+          <img class="icon icon-lg" src="assets/icons/wand-stars.svg" alt="">
+          teams like
+          <a class="hl hl-olive" href="#the-athletic">The Athletic</a><span style="color:var(--hl-mint)">,</span>
+          <a class="hl hl-green" href="#tinder">Tinder</a>
+          <span class="annotation"><span style="color:var(--hl-blue)">*</span>and a bunch more<span style="color:var(--hl-brown)">.</span></span>
+        </p>
+
+        <p>
+          <span class="hl hl-yellow" data-hover-card="dogs" tabindex="0">Dogs</span><span style="color:var(--hl-pink)">,</span> Muay Thai<span style="color:var(--hl-green)">,</span>
+          scents in all forms<span style="color:var(--hl-orange)">,</span> and hot sauce are my essentials<span style="color:var(--hl-purple)">.</span>
+          <img class="icon icon-lg" src="assets/icons/lungs.svg" alt="">
+        </p>
+
+        <p>
+          Shoot me an
+          <img class="icon icon-lg" src="assets/icons/email.svg" alt="">
+          <a class="hl hl-red email-copy" id="email-link" href="mailto:denise.salvadorv@gmail.com" data-default-text="email">email</a><span style="color:var(--hl-yellow)">,</span> or find me on
+          <a class="hl hl-mint" href="https://www.linkedin.com/in/ddenisesalvador/" target="_blank" rel="noopener noreferrer">LinkedIn</a><span style="color:var(--hl-red)">.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- Single reusable hover card; its contents are set per-trigger by the
+         script below. Lives outside the text flow so it never affects layout. -->
+    <div id="hover-card" aria-hidden="true"></div>
+
+    <section class="portfolio-content" aria-label="Selected work">
+      <article class="project" id="approvals">
+        <div class="project-info">
+          <div class="project-top">
+            <span class="project-star" aria-hidden="true">✶</span>
+            <div class="project-meta">
+              <p class="project-year">2025</p>
+              <p class="project-name">Approvals</p>
+              <p class="project-company">w/Frame.io + Adobe Workfront</p>
+              <p class="project-blurb">I designed an Approval state within Frame.io's Share permissions to let anyone approve creative work, no account required.</p>
+            </div>
+          </div>
+        </div>
+        <div class="project-thumb">
+          <div class="project-media">
+            <video src="assets/video/approvals.mp4" muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+        <div class="trace-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="project" id="reel-layout">
+        <div class="project-info">
+          <div class="project-top">
+            <span class="project-star" aria-hidden="true">✶</span>
+            <div class="project-meta">
+              <p class="project-year">2024</p>
+              <p class="project-name">Reel Layout</p>
+              <p class="project-company">w/Frame.io</p>
+              <p class="project-blurb">I led the redesign of Frame.io's presentation-style Share layout, built for editors sending a truly finished cut to directors and executives.</p>
+            </div>
+          </div>
+        </div>
+        <div class="project-thumb">
+          <div class="project-media">
+            <video src="assets/video/reel-layout.mp4" muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+        <div class="trace-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="project" id="the-athletic">
+        <div class="project-info">
+          <div class="project-top">
+            <span class="project-star" aria-hidden="true">✶</span>
+            <div class="project-meta">
+              <p class="project-year">2021</p>
+              <p class="project-name">App Redesign</p>
+              <p class="project-company">w/MetaLab + The Athletic</p>
+              <p class="project-blurb">I helped explore product concepts to make The Athletic's quality obvious to people who hadn't subscribed yet.</p>
+            </div>
+          </div>
+        </div>
+        <div class="project-thumb">
+          <div class="project-media">
+            <video src="assets/video/the-athletic.mp4" muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+        <div class="trace-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="project" id="tinder">
+        <div class="project-info">
+          <div class="project-top">
+            <span class="project-star" aria-hidden="true">✶</span>
+            <div class="project-meta">
+              <p class="project-year">2019</p>
+              <p class="project-name">POC - Dating App</p>
+              <p class="project-company">w/MetaLab + Tinder</p>
+              <p class="project-blurb">I helped shape an invite-only dating concept guided by a human Host, designed to feel safe, private, and genuinely organic.</p>
+            </div>
+          </div>
+        </div>
+        <div class="project-thumb">
+          <div class="project-media">
+            <video src="assets/video/tinder.mp4" muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+        <div class="trace-line trace-line--last" aria-hidden="true"></div>
+      </article>
+    </section>
+  </main>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var hero = document.querySelector('.hero');
+  var inner = document.querySelector('.hero-inner');
+
+  function fit() {
+    // .hero-inner is capped at 80% of the hero's height (see CSS), leaving
+    // ~10% breathing room above and below — so the fit budget matches that,
+    // not the full 100svh hero box.
+    var availableHeight = hero.clientHeight * 0.8;
+    if (!availableHeight) return;
+
+    // The upper bound only needs to be generous enough that the search never
+    // clips a size that would actually fit — the two checks below decide what
+    // really fits. (This used to be innerWidth * 0.045, which at 390px capped
+    // the hero at ~17.6px regardless of free vertical space, so on phones the
+    // text plateaued early and left the bottom of the viewport empty.)
+    var minFs = 12;
+    var maxFs = Math.min(window.innerHeight * 0.22, 96);
+    var lo = minFs, hi = Math.max(maxFs, minFs), best = minFs;
+
+    for (var i = 0; i < 18; i++) {
+      var mid = (lo + hi) / 2;
+      root.style.setProperty('--hero-fs', mid + 'px');
+      // Height: must stay inside the 80% budget. Width: the previous
+      // width-coefficient was a proxy for "don't let a long word overflow" —
+      // measuring scrollWidth tests that directly, so the type can grow to
+      // whatever genuinely fits at any viewport size.
+      var fitsHeight = inner.scrollHeight <= availableHeight;
+      var fitsWidth = inner.scrollWidth <= inner.clientWidth + 1;
+      if (fitsHeight && fitsWidth) {
+        best = mid;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    root.style.setProperty('--hero-fs', best + 'px');
+  }
+
+  function run() {
+    root.classList.add('fitting');
+    fit();
+    root.classList.remove('fitting');
+  }
+
+  var raf = window.requestAnimationFrame || function (cb) { setTimeout(cb, 16); };
+
+  raf(function () { raf(run); });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(run);
+  }
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(run, 120);
+  });
+  window.addEventListener('orientationchange', run);
+})();
+</script>
+
+<script>
+// ---------- Hover card: one component, content varies per trigger ----------
+// Any element with [data-hover-card="<key>"] in the hero shows the shared
+// #hover-card populated from HOVER_CARD_CONTENT below. Adding another
+// trigger = one markup attribute + one entry here, not a new implementation.
+//
+// og: values are the real Open Graph images published by each site
+// (read from their <meta property="og:image"> tags), not stand-ins.
+var HOVER_CARD_CONTENT = {
+  denise: {
+    layout: 'single',
+    images: ['assets/photos/ladeni.png']
+  },
+  dogs: {
+    // fanned card stack; cards cycle to the front on a loop.
+    // first entry starts in front (kovu on top)
+    layout: 'fan',
+    images: ['assets/photos/kovu.png', 'assets/photos/buni.png']
+  },
+  frameio: {
+    layout: 'og',
+    images: ['https://cdn.sanity.io/images/s6lu43cv/production-v4/c9bc38aba1856b5c2664f207a2436851730e6a0d-1200x630.png?w=1200&h=630&fm=jpg&q=60']
+  },
+  metalab: {
+    layout: 'og',
+    images: ['https://cdn.sanity.io/images/nuxb3jim/production-july-2025/650536c56eff4fa74f4db66048d36451b2343616-1600x900.png?w=1200&h=630&q=80&fm=webp&fit=clip']
+  }
+};
+
+(function () {
+  var card = document.getElementById('hover-card');
+  var triggers = document.querySelectorAll('[data-hover-card]');
+  if (!card || !triggers.length) return;
+
+  var OFFSET = 18;
+  var activeKey = null;
+
+  function render(key) {
+    if (key === activeKey) return; // already built; don't thrash the DOM on mousemove
+    activeKey = key;
+
+    var cfg = HOVER_CARD_CONTENT[key];
+    card.innerHTML = '';
+    stopSwap();
+    // per-layout width (dogs 10% smaller, og 30% larger — see CSS)
+    card.className = card.classList.contains('visible') ? 'visible' : '';
+    if (!cfg) return;
+    if (cfg.layout === 'fan') card.classList.add('hc-dogs');
+    if (cfg.layout === 'og') card.classList.add('hc-og');
+
+    var stage = document.createElement('div');
+    stage.className = 'hover-card-stage ' + cfg.layout;
+
+    var imgs = cfg.images.map(function (src, i) {
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+      img.loading = 'lazy';
+      if (cfg.layout === 'fan') {
+        img.classList.add(i === 0 ? 'card-front' : 'card-back');
+      }
+      stage.appendChild(img);
+      return img;
+    });
+
+    card.appendChild(stage);
+
+    if (cfg.layout === 'fan' && imgs.length > 1) startSwap(imgs);
+  }
+
+  // ---- Dogs: cycle which card sits at the front of the fan ----
+  // Only the front/back CLASS moves between cards; each card's rotation and
+  // offset come from those classes, so the fan shape is preserved throughout
+  // and the change is carried by a CSS transform transition.
+  var swapTimer = null;
+  function startSwap(imgs) {
+    var front = 0;
+    swapTimer = setInterval(function () {
+      imgs[front].classList.replace('card-front', 'card-back');
+      front = (front + 1) % imgs.length;
+      imgs[front].classList.replace('card-back', 'card-front');
+    }, 1400);
+  }
+  function stopSwap() {
+    if (swapTimer) { clearInterval(swapTimer); swapTimer = null; }
+  }
+
+  function place(x, y) {
+    var rect = card.getBoundingClientRect();
+    var px = x + OFFSET;
+    var py = y + OFFSET;
+    // flip toward the cursor's other side rather than running off-screen
+    if (px + rect.width > window.innerWidth) px = x - rect.width - OFFSET;
+    if (py + rect.height > window.innerHeight) py = y - rect.height - OFFSET;
+    px = Math.max(8, px);
+    py = Math.max(8, py);
+    card.style.transform = 'translate(' + px + 'px, ' + py + 'px)';
+  }
+
+  function show(key) {
+    render(key);
+    card.classList.add('visible');
+  }
+
+  function hide() {
+    card.classList.remove('visible');
+    card.style.transform = 'translate(-9999px, -9999px)';
+    stopSwap();
+    activeKey = null;
+  }
+
+  triggers.forEach(function (el) {
+    var key = el.getAttribute('data-hover-card');
+
+    el.addEventListener('mouseenter', function (e) {
+      show(key);
+      place(e.clientX, e.clientY);
+    });
+    el.addEventListener('mousemove', function (e) {
+      place(e.clientX, e.clientY);
+    });
+    el.addEventListener('mouseleave', hide);
+
+    // Keyboard accessibility: no cursor to follow, so anchor the card just
+    // below the focused word instead.
+    el.addEventListener('focus', function () {
+      show(key);
+      var r = el.getBoundingClientRect();
+      place(r.left, r.bottom);
+    });
+    el.addEventListener('blur', hide);
+  });
+
+  // Don't leave a card stranded mid-screen if the page moves under it.
+  window.addEventListener('scroll', hide, { passive: true });
+})();
+</script>
+
+<script>
+// ---------- Email: copy to clipboard, text -> "copied!" for 5s ----------
+// Applies to every element with the shared .email-copy class, so the hero's
+// inline "email" link and the nav's "e-mail" link both get identical behavior.
+(function () {
+  var links = document.querySelectorAll('.email-copy');
+  if (!links.length) return;
+
+  var address = 'denise.salvadorv@gmail.com';
+
+  links.forEach(function (link) {
+    var defaultText = link.getAttribute('data-default-text') || link.textContent;
+    var resetTimer = null;
+
+    link.addEventListener('click', function (e) {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        // Clipboard API unavailable — gracefully fall back to the plain mailto link.
+        return;
+      }
+
+      e.preventDefault();
+
+      navigator.clipboard.writeText(address).then(function () {
+        link.textContent = 'copied!';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () {
+          link.textContent = defaultText;
+        }, 5000);
+      }).catch(function () {
+        // Copy failed — fall back to letting the browser open the mail client.
+        window.location.href = link.getAttribute('href');
+      });
+    });
+  });
+})();
+</script>
+
+<script>
+// ---------- Nav activation: fade in name/email/LinkedIn once past the hero ----------
+(function () {
+  var hero = document.querySelector('.hero');
+  if (!hero || !('IntersectionObserver' in window)) return;
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      document.body.classList.toggle('nav-active', !entry.isIntersecting);
+    });
+  }, { threshold: 0 });
+
+  observer.observe(hero);
+})();
+</script>
+
+<script>
+// ---------- Scroll effects: project dissolve-in + trace-line draw-in ----------
+// IntersectionObserver decides WHICH elements are worth updating; a single
+// rAF-throttled scroll listener does the actual work only for the trace-line
+// set (the dissolve-in is a one-shot class toggle, no per-frame work needed).
+//
+// Graceful degradation: if IntersectionObserver isn't available, this whole
+// block bails out immediately. Projects then simply stay at their CSS
+// default (opacity: 1, fully visible — set in CSS, not by this script), and
+// the trace-line stays at its CSS default (clip-path: inset(0 0 0% 0), i.e.
+// fully drawn), since both "start hidden" states are only ever applied once
+// this script actually runs — mirroring how .fitting only ever gets added
+// by the hero's own fit script.
+(function () {
+  if (!('IntersectionObserver' in window)) return;
+
+  var projects = Array.prototype.slice.call(document.querySelectorAll('.project'));
+  var connectors = Array.prototype.slice.call(document.querySelectorAll('.trace-line'));
+  if (!projects.length && !connectors.length) return;
+
+  // Opt in to the animated hidden-then-reveal state only now that JS is
+  // confirmed running — the CSS default before this point is fully visible.
+  document.documentElement.classList.add('js-reveal');
+
+  // ---- Dissolve + slide-in: one-shot per project, CSS handles the transition ----
+  if (projects.length) {
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          revealObserver.unobserve(entry.target); // reveal once, don't re-trigger on scroll-back
+        }
+      });
+    }, { threshold: 0.2 });
+    projects.forEach(function (el) { revealObserver.observe(el); });
+  }
+
+  // ---- Trace line: draws in via clip-path, eased toward scroll progress ----
+  if (connectors.length) {
+    // Hidden on mobile (display: none) — offsetParent is reliably null for
+    // a display:none element in this layout, so this is a cheap way to
+    // no-op on it rather than doing pointless observe/measure/paint work.
+    function isHidden(el) {
+      return el.offsetParent === null;
+    }
+
+    connectors.forEach(function (line) {
+      if (!isHidden(line)) line.style.clipPath = 'inset(0 0 100% 0)';
+    });
+
+    var activeConnectors = new Set();
+    var connectorObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting && !isHidden(entry.target)) {
+          activeConnectors.add(entry.target);
+        } else {
+          activeConnectors.delete(entry.target);
+        }
+      });
+    }, { rootMargin: '15% 0px 15% 0px' });
+    connectors.forEach(function (line) { connectorObserver.observe(line); });
+
+    var EASE = 0.1; // lower = more lag behind the scroll position
+    var progressState = new Map(); // line -> { current, target }
+    var looping = false;
+
+    function targetFor(line) {
+      var vh = window.innerHeight;
+      var rect = line.getBoundingClientRect();
+      // Starts drawing when the line's top reaches 85% down the viewport,
+      // finishes once its full height has scrolled past that point —
+      // i.e. synced to this whole star-to-star span entering the viewport.
+      var t = (vh * 0.85 - rect.top) / rect.height;
+      return Math.max(0, Math.min(1, t));
+    }
+
+    function loop() {
+      var stillMoving = false;
+
+      activeConnectors.forEach(function (line) {
+        if (isHidden(line)) return; // resized across the 480px breakpoint mid-scroll
+
+        var state = progressState.get(line);
+        if (!state) {
+          state = { current: 0, target: 0 };
+          progressState.set(line, state);
+        }
+        state.target = targetFor(line);
+
+        var diff = state.target - state.current;
+        if (Math.abs(diff) > 0.001) {
+          state.current += diff * EASE; // eases toward target each frame, trailing behind scroll
+          stillMoving = true;
+        } else {
+          state.current = state.target;
+        }
+
+        line.style.clipPath = 'inset(0 0 ' + ((1 - state.current) * 100).toFixed(1) + '% 0)';
+      });
+
+      if (stillMoving) {
+        requestAnimationFrame(loop);
+      } else {
+        looping = false;
+      }
+    }
+
+    function onScroll() {
+      if (!looping) {
+        looping = true;
+        requestAnimationFrame(loop);
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll(); // set correct initial state for whatever's already in view on load
+  }
+})();
+</script>
+
+<script>
+// ---------- Trace-line horizontal alignment: measured, not calculated ----------
+// Two rounds of CSS-calc() assumptions about .project-star's em-box both
+// missed the glyph's actual rendered center (font glyphs generally aren't
+// flush/centered within their own advance width). This measures the real
+// thing instead: each line's "left" is set from .project-star's actual
+// getBoundingClientRect() midpoint, relative to its own .project (the
+// line's positioned ancestor). Recomputed on load, after the webfont
+// finishes loading (glyph metrics shift between the fallback font and Dela
+// Gothic One), and on resize.
+// The CSS "left: 0.5em" on .trace-line is left in place as the no-JS
+// fallback — this script only overrides it inline when it actually runs.
+(function () {
+  function alignTraceLines() {
+    document.querySelectorAll('.trace-line').forEach(function (line) {
+      var project = line.closest('.project');
+      var star = project && project.querySelector('.project-star');
+      if (!star) return;
+
+      var starRect = star.getBoundingClientRect();
+      var projectRect = project.getBoundingClientRect();
+      var starMidX = starRect.left + starRect.width / 2;
+      line.style.left = (starMidX - projectRect.left) + 'px';
+    });
+  }
+
+  alignTraceLines();
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(alignTraceLines);
+  }
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(alignTraceLines, 120);
+  });
+})();
+</script>
+
+<script>
+// ---------- Project videos: only decode/play while their thumbnail is visible ----------
+// These are multi-MB files, so eagerly autoplaying all four on load would be
+// wasteful. preload="metadata" (set in the HTML) keeps the initial fetch
+// small; this only calls .play() once a thumbnail is actually on screen, and
+// .pause()s it again once it scrolls away.
+(function () {
+  var videos = document.querySelectorAll('.project-media video');
+  if (!videos.length) return;
+
+  if (!('IntersectionObserver' in window)) {
+    // No IO support — just let them play outright rather than staying inert.
+    videos.forEach(function (v) { v.play().catch(function () {}); });
+    return;
+  }
+
+  var videoObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.play().catch(function () {}); // ignore autoplay-policy rejections
+      } else {
+        entry.target.pause();
+        entry.target.currentTime = 0; // always restart from the top on re-entry
+      }
+    });
+  }, { threshold: 0.99 }); // effectively "fully in view"; 0.99 rather than 1.0 so
+                           // sub-pixel rounding on fractional layouts can't stop it firing
+
+  videos.forEach(function (v) { videoObserver.observe(v); });
+})();
+</script>
+
+</body>
+</html>
