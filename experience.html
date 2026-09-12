@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Experience — Denise Salvador</title>
+<meta name="description" content="Most recent experience: lululemon, Frame.io (Adobe), and MetaLab.">
+
+<!-- Favicons -->
+<link rel="icon" href="assets/meta/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/meta/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="assets/meta/apple-touch-icon.png">
+
+<!-- Open Graph. Absolute URLs: scrapers don't resolve relative paths. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Denise Salvador">
+<meta property="og:title" content="Experience — Denise Salvador">
+<meta property="og:description" content="Most recent experience: lululemon, Frame.io (Adobe), and MetaLab.">
+<meta property="og:url" content="https://denisesalvador.com/experience.html">
+<meta property="og:image" content="https://denisesalvador.com/assets/meta/open-graph.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Denise Salvador — colourful dot grid">
+
+<!-- X / Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Experience — Denise Salvador">
+<meta name="twitter:description" content="Most recent experience: lululemon, Frame.io (Adobe), and MetaLab.">
+<meta name="twitter:image" content="https://denisesalvador.com/assets/meta/open-graph.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Sometype+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -143,7 +167,12 @@
      so experience.html's fixed 100svh no-scroll layout is unaffected. */
   @media (max-width: 1024px){
     #site-nav{
-      padding-bottom: calc(24px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+      /* env(safe-area-inset-bottom) only covers the hardware home indicator —
+         it does NOT account for the browser's own bottom toolbar, which on
+         iOS Safari overlays fixed bottom:0 elements. max() guarantees a real
+         gap on devices that report no inset at all (most Android browsers),
+         and the larger base lifts the bar clear of the toolbar. */
+      padding-bottom: calc(32px + var(--pad-y) + max(env(safe-area-inset-bottom, 0px), 12px));
     }
   }
   /* TABLET LANDSCAPE — the desktop rule sizes the cluster off vmin, which on
@@ -153,7 +182,12 @@
      Repositioned by CENTRE here (left/top + translate(-50%,-50%)) rather than
      the desktop's right-edge anchor, since the guide marks a centre point.
      pointer: coarse keeps this off small desktop windows of the same width. */
-  @media (orientation: landscape) and (pointer: coarse) and (min-height: 501px){
+  /* NB: this was gated on (pointer: coarse), which iPadOS Safari reports as
+     'fine' whenever a trackpad/Magic Keyboard is attached — so on a real iPad
+     the rule silently didn't apply, the desktop vmin sizing took over, and the
+     cluster overflowed the right edge. Keyed on dimensions instead, which is
+     reliable regardless of input device. */
+  @media (orientation: landscape) and (min-height: 501px) and (max-height: 900px) and (max-width: 1400px){
     :root{
       --dot-grid-target: 44.2vh;
     }
@@ -368,28 +402,36 @@
     :root{
       /* Sized from the placement guides: the rotated cluster should span
          ~50vw of a tablet and ~62vw of a phone. Since a 45°-rotated square's
-         bounding box is side x sqrt(2), the underlying height is that / 1.41
-         — which fits the line below across the whole touch range
-         (≈180px at 390w, ≈278px at 768w). */
-      --dot-grid-target: clamp(150px, 25.95vw + 78.8px, 360px);
+         bounding box is side x sqrt(2), the underlying height is that / 1.41.
+         The 24vh term is a HEIGHT ceiling: the width-based value alone was
+         tuned against the simulator's full 844px viewport, but a real phone
+         browser keeps ~100px of chrome, so on an actual device the cluster
+         was too big for the space left and pushed into the list below. */
+      --dot-grid-target: min(clamp(120px, 25.95vw + 78.8px, 360px), 24vh);
     }
     main{
       justify-content: flex-start;
       padding-inline: var(--pad-x);
       padding-top: clamp(16px, 4vh, 48px);
       /* clears the fixed bottom nav (its own padding + safe area) */
-      padding-bottom: calc(72px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(52px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
     }
     .dots-stage{
       flex: 0 0 auto;
       display: flex;
       align-items: center;
       justify-content: center;
+      /* THE OVERLAP BUG: a transform never changes layout size, so this box
+         only reserved the image's UNROTATED height while the 45°-rotated
+         cluster actually paints sqrt(2)x taller — bleeding ~20% of its height
+         above and below into the heading underneath. Reserving the true
+         rotated footprint here is what stops the dots sitting on top of
+         "Most recent experience". */
+      height: calc(var(--dot-grid-target) * 1.4142);
       /* Drops the cluster to the centre marked in the placement guides
-         (26.2% down on phone, 35.1% on tablet). Those two targets need
-         +60px at 390w and +122px at 768w, which are 15.4vw and 15.9vw — so
-         a single vw-based offset lands both. */
-      padding-top: clamp(40px, 15.6vw, 170px);
+         (26.2% down on phone, 35.1% on tablet): +60px at 390w and +122px at
+         768w, i.e. 15.4vw and 15.9vw. Also capped in vh for short phones. */
+      padding-top: min(clamp(24px, 15.6vw, 170px), 7vh);
     }
     .dot-grid--large{
       position: static;   /* back into flow, above the list */
@@ -434,6 +476,20 @@
     .experience-row{
       gap: clamp(20px, 6vw, 72px);     /* the desktop gap is too wide at this size */
     }
+  }
+
+  /* Safety net. The no-scroll design holds on normal phones, but a very short
+     viewport (iPhone SE ~553px of usable height) can't fit the heading, three
+     entries and the cluster at readable sizes. Rather than clip content behind
+     overflow:hidden, let this one case scroll — a scrollbar is a far better
+     failure mode than text disappearing under the nav. */
+  @media (orientation: portrait) and (max-height: 620px){
+    html, body{
+      height: auto;
+      min-height: 100svh;
+      overflow: visible;
+    }
+    body{ overflow-y: auto; }
   }
 
   @media (max-width: 480px){

@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Denise — Product Designer</title>
+<meta name="description" content="Product designer based in Vancouver, Canada. 10+ years across enterprise and 0-to-1 products — previously at Frame.io (Adobe) and MetaLab.">
+
+<!-- Favicons -->
+<link rel="icon" href="assets/meta/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/meta/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="assets/meta/apple-touch-icon.png">
+
+<!-- Open Graph. Absolute URLs: scrapers don't resolve relative paths. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Denise Salvador">
+<meta property="og:title" content="Denise Salvador — Product Designer">
+<meta property="og:description" content="Product designer based in Vancouver, Canada. 10+ years across enterprise and 0-to-1 products — previously at Frame.io (Adobe) and MetaLab.">
+<meta property="og:url" content="https://denisesalvador.com/">
+<meta property="og:image" content="https://denisesalvador.com/assets/meta/open-graph.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Denise Salvador — colourful dot grid">
+
+<!-- X / Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Denise Salvador — Product Designer">
+<meta name="twitter:description" content="Product designer based in Vancouver, Canada. 10+ years across enterprise and 0-to-1 products — previously at Frame.io (Adobe) and MetaLab.">
+<meta name="twitter:image" content="https://denisesalvador.com/assets/meta/open-graph.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Sometype+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -154,7 +178,12 @@
      so experience.html's fixed 100svh no-scroll layout is unaffected. */
   @media (max-width: 1024px){
     #site-nav{
-      padding-bottom: calc(24px + var(--pad-y) + env(safe-area-inset-bottom, 0px));
+      /* env(safe-area-inset-bottom) only covers the hardware home indicator —
+         it does NOT account for the browser's own bottom toolbar, which on
+         iOS Safari overlays fixed bottom:0 elements. max() guarantees a real
+         gap on devices that report no inset at all (most Android browsers),
+         and the larger base lifts the bar clear of the toolbar. */
+      padding-bottom: calc(32px + var(--pad-y) + max(env(safe-area-inset-bottom, 0px), 12px));
     }
   }
   /* Short landscape: reclaim vertical space — the full touch clearance is a
@@ -348,7 +377,11 @@
   /* ---------- PROJECT LIST ---------- */
 
   .portfolio-content{
-    padding-block: calc(var(--pad-y) + 4em) clamp(64px, 10vh, 140px);
+    /* Trailing space is nav-height aware: the bottom bar is fixed and has no
+       background, so without this the last project's blurb ends up sitting
+       under it with nowhere left to scroll. */
+    padding-block: calc(var(--pad-y) + 4em)
+                   calc(clamp(64px, 10vh, 140px) + 3em + max(env(safe-area-inset-bottom, 0px), 12px));
     padding-inline: var(--portfolio-indent-x);
   }
 
@@ -779,7 +812,7 @@
         </div>
         <div class="project-thumb">
           <div class="project-media">
-            <video src="assets/video/approvals.mp4" muted loop playsinline preload="metadata"></video>
+            <video src="assets/video/approvals.mp4" poster="assets/video/posters/approvals.jpg" muted loop playsinline preload="metadata"></video>
           </div>
         </div>
         <div class="trace-line" aria-hidden="true"></div>
@@ -799,7 +832,7 @@
         </div>
         <div class="project-thumb">
           <div class="project-media">
-            <video src="assets/video/reel-layout.mp4" muted loop playsinline preload="metadata"></video>
+            <video src="assets/video/reel-layout.mp4" poster="assets/video/posters/reel-layout.jpg" muted loop playsinline preload="metadata"></video>
           </div>
         </div>
         <div class="trace-line" aria-hidden="true"></div>
@@ -819,7 +852,7 @@
         </div>
         <div class="project-thumb">
           <div class="project-media">
-            <video src="assets/video/the-athletic.mp4" muted loop playsinline preload="metadata"></video>
+            <video src="assets/video/the-athletic.mp4" poster="assets/video/posters/the-athletic.jpg" muted loop playsinline preload="metadata"></video>
           </div>
         </div>
         <div class="trace-line" aria-hidden="true"></div>
@@ -839,7 +872,7 @@
         </div>
         <div class="project-thumb">
           <div class="project-media">
-            <video src="assets/video/tinder.mp4" muted loop playsinline preload="metadata"></video>
+            <video src="assets/video/tinder.mp4" poster="assets/video/posters/tinder.jpg" muted loop playsinline preload="metadata"></video>
           </div>
         </div>
         <div class="trace-line trace-line--last" aria-hidden="true"></div>
@@ -1279,6 +1312,23 @@ var HOVER_CARD_CONTENT = {
     return;
   }
 
+  // Two observers with different jobs:
+  //  1. a WIDE one that just warms the buffer before the box is on screen, so
+  //     the first frame is decoded and ready by the time it matters;
+  //  2. a TIGHT one that actually starts/stops playback when fully in view.
+  // Previously the single tight observer also triggered the first byte of
+  // loading, which is why there was a visible empty box before the video
+  // popped in — the poster now covers that gap, and this covers it earlier.
+  var preloadObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        if (entry.target.preload !== 'auto') entry.target.preload = 'auto';
+        entry.target.load();
+        preloadObserver.unobserve(entry.target); // warm once
+      }
+    });
+  }, { rootMargin: '150% 0px 150% 0px' });
+
   var videoObserver = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (entry.isIntersecting) {
@@ -1291,7 +1341,10 @@ var HOVER_CARD_CONTENT = {
   }, { threshold: 0.99 }); // effectively "fully in view"; 0.99 rather than 1.0 so
                            // sub-pixel rounding on fractional layouts can't stop it firing
 
-  videos.forEach(function (v) { videoObserver.observe(v); });
+  videos.forEach(function (v) {
+    preloadObserver.observe(v);
+    videoObserver.observe(v);
+  });
 })();
 </script>
 
