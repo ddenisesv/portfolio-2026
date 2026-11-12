@@ -526,7 +526,11 @@
      video inside always fills it completely via object-fit: cover, cropping
      as needed rather than being sized by its own native dimensions. */
   .project-thumb{
-    flex: 1 1 auto;
+    /* flex-basis 0 (not auto): the thumbnail column takes its width from the
+       space left beside .project-info, never from the size of the media
+       inside it. With "auto", the column measured the poster/video's own
+       pixel size, which is unknown until the file loads. */
+    flex: 1 1 0;
     min-width: 0;
     display: flex;
     align-items: center;
@@ -534,9 +538,11 @@
   }
   .project-media{
     aspect-ratio: 1106 / 850;
-    max-height: 85svh;
-    max-width: 100%;
-    width: auto;
+    /* Width is set by the layout, not by the media file: as wide as the
+       column allows, but never taller than 85svh. With "width: auto" the box
+       took the poster's (1106px) and then the video's native size, so it
+       changed size on first load on large screens. */
+    width: min(100%, calc(85svh * 1106 / 850));
     height: auto;
     border-radius: clamp(6px, 0.8vw, 16px);
     overflow: hidden;
