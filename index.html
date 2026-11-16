@@ -47,6 +47,8 @@
 
   :root{
     --bg: #fefff1;
+    --grain-opacity: 0.09;
+    --mottle-opacity: 0.02;
     --ink: #252623;
 
     --hl-pink: #ffc0cb;
@@ -125,6 +127,32 @@
   body{
     font-family: 'Dela Gothic One', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    background-color: var(--bg);
+    position: relative;
+    isolation: isolate;
+  }
+
+  body::before,
+  body::after{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1; /* behind content, images stay clean */
+    pointer-events: none;
+  }
+
+  /* fine grain */
+  body::before{
+    opacity: var(--grain-opacity);
+    background-size: 380px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 -0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* soft mottling */
+  body::after{
+    opacity: var(--mottle-opacity);
+    background-size: 600px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 -0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
   }
 
   /* Hide the hero until JS has computed a font size that fits, to avoid a flash
